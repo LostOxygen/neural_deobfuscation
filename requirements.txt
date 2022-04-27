@@ -1,0 +1,9 @@
+wheel
+pytorch
+torchvision
+torchaudio
+numpy
+matplotlib
+tqdm
+pylint
+torchsummary
