@@ -26,7 +26,9 @@ def main() -> None:
     print()
 
     # ---------------- Train MBA Model ----------------
-    train()
+    train("x+y", "add")
+    train("x-y", "sub")
+    train("x*y", "mul")
 
     # ---------------- Train Mapping Model ----------------
 

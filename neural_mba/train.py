@@ -16,9 +16,9 @@ SAVE_EPOCHS = [0, 25, 50, 75, 100, 125, 150, 175, 200]
 MODEL_PATH = "./models/"
 
 TRAIN_CONFIG: Dict[str, Any] = {
-    'training_expr' : '(x ^ y) + 2 * ( x & y)',
+    #'training_expr' : '(x ^ y) + 2 * ( x & y)',
     'training_samples' : 10000,
-    'device' : 'cpu',
+    'device' : 'cuda',
     'epochs' : 3,
     'weight_decay' : 1e-4,
     'learning_rate': 0.001,
@@ -26,17 +26,22 @@ TRAIN_CONFIG: Dict[str, Any] = {
 }
 TEST_CONFIG: Dict[str, Any] = {
     'batch_size' : 1,
-    'device' : 'cpu',
+    'device' : 'cuda',
     'samples' : 100,
 }
 
 
-def save_model(net: nn.Sequential) -> None:
+def save_model(net: nn.Sequential, operation_suffix: str) -> None:
     """
     helper function which saves the given net in the specified path.
     if the path does not exists, it will be created.
-    :param net: object of the model
-    :return: None
+
+    Parameters:
+        net: the model to save
+        operation_suffix: the suffix of the operation to create the save path with
+    
+    Returns:
+        None
     """
     print("\n[ Saving Model ]")
     state = {
@@ -44,18 +49,22 @@ def save_model(net: nn.Sequential) -> None:
     }
     if not os.path.isdir(MODEL_PATH):
         os.mkdir(MODEL_PATH)
-    torch.save(state, MODEL_PATH+"mba_model")
+    torch.save(state, f"{MODEL_PATH}mba_model_{operation_suffix}")
 
 
 def adjust_learning_rate(optimizer, epoch: int, epochs: int, learning_rate: int) -> None:
     """
     helper function to adjust the learning rate
     according to the current epoch to prevent overfitting.
-    :paramo ptimizer: object of the used optimizer
-    :param epoch: the current epoch
-    :param epochs: the total epochs of the training
-    :param learning_rate: the specified learning rate for the training
-    :return: None
+    
+    Parameters:
+        optimizer: the optimizer to adjust the learning rate with
+        epoch: the current epoch
+        epochs: the total number of epochs
+        learning_rate: the learning rate to adjust
+
+    Returns:
+        None
     """
     new_lr = learning_rate
     if epoch >= np.floor(epochs*0.5):
@@ -66,19 +75,24 @@ def adjust_learning_rate(optimizer, epoch: int, epochs: int, learning_rate: int)
         param_group['lr'] = new_lr
 
 
-def get_loaders() -> DataLoader:
+def get_loaders(expr: str) -> DataLoader:
     """
-    helper function to create dataset loaders
-    :param batch_size: batch size which should be used for the dataloader
-    :return: dataloader with the specified dataset
+    Helper function to create the dataloader for the training and the test.
+
+    Parameters:
+        expr: the operation expression to train the model on
+    
+    Returns:
+        train_loader: the dataloader for the training
+        test_loader: the dataloader for the test
     """
-    train_dataset = MBADataset(TRAIN_CONFIG['training_expr'], \
+    train_dataset = MBADataset(expr, \
                      TRAIN_CONFIG['training_samples'], \
                      device=TRAIN_CONFIG['device'])
     train_loader = DataLoader(train_dataset,
                     batch_size=TRAIN_CONFIG['batch_size'], shuffle=True,
                     drop_last=True)
-    test_dataset = MBADataset(TRAIN_CONFIG['training_expr'], \
+    test_dataset = MBADataset(expr,
                         TEST_CONFIG['samples'], \
                         device=TEST_CONFIG['device'])
     test_loader = DataLoader(test_dataset,
@@ -88,11 +102,17 @@ def get_loaders() -> DataLoader:
     return train_loader, test_loader
 
 
-def train() -> None:
+def train(expr: str, operation_suffix: str) -> None:
     """
     Main function to train the model with the specified parameters. Saves the model in every
     epoch specified in SAVE_EPOCHS. Prints the model status during the training.
-    :return: None
+
+    Parameters:
+        expr: the operation expression to train the model on
+        operation_suffix: the suffix of the operation to create the save path with
+
+    Returns:
+        None (but saves the networks in the specified path)
     """
     print("[ Initialize Training ]")
 
@@ -103,7 +123,7 @@ def train() -> None:
     loss_fn = nn.MSELoss()
     optimizer = optim.Adam(model.parameters(), lr=TRAIN_CONFIG['learning_rate'], \
                            weight_decay=TRAIN_CONFIG['weight_decay'])
-    train_loader, test_loader = get_loaders()
+    train_loader, test_loader = get_loaders(expr)
 
     with trange(1, TRAIN_CONFIG['epochs']+1, bar_format='{l_bar}{bar:30}{r_bar}') as pbar:
         losses = [0.0]
@@ -153,4 +173,4 @@ def train() -> None:
             if idx == 50:
                 break
     # save model
-    save_model(model)
+    save_model(model, operation_suffix)

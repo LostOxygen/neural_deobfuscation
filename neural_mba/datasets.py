@@ -26,7 +26,7 @@ class MBADataset(Dataset[Any]):
             x = random.randint(0, 2**8-1)
             y = random.randint(0, 2**8-1)
             res = float(eval_expr(self.expr, x, y))
-            print(f"{x} + {y} = {res}", end="\r", flush=True)
+            print(f"{x} {self.expr[1]} {y} = {res}", end="\r", flush=True)
             yield torch.tensor([float(x), float(y)]), torch.tensor([res]) # type: ignore
 
 def eval_expr(expr_str: str, x: int, y: int) -> Any: # pylint: disable=unused-argument
