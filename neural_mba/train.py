@@ -43,7 +43,6 @@ def save_model(net: nn.Sequential, operation_suffix: str) -> None:
     Returns:
         None
     """
-    print("\n[ Saving Model ]")
     state = {
         'net': net.state_dict()
     }
@@ -102,7 +101,7 @@ def get_loaders(expr: str) -> DataLoader:
     return train_loader, test_loader
 
 
-def train(expr: str, operation_suffix: str) -> None:
+def train(expr: str, operation_suffix: str, verbose: bool) -> None:
     """
     Main function to train the model with the specified parameters. Saves the model in every
     epoch specified in SAVE_EPOCHS. Prints the model status during the training.
@@ -110,15 +109,15 @@ def train(expr: str, operation_suffix: str) -> None:
     Parameters:
         expr: the operation expression to train the model on
         operation_suffix: the suffix of the operation to create the save path with
+        verbose: if True, prints the training status
 
     Returns:
-        None (but saves the networks in the specified path)
+        model: trained pytorch model (but also saves the model in the specified path)
     """
-    print("[ Initialize Training ]")
-
     # input dimension of the model is the length of the dictionary
     model = MBAModel().to(TRAIN_CONFIG['device'])
-    summary(model, input_size=(2,))
+    if verbose:
+        summary(model, input_size=(2,))
 
     loss_fn = nn.MSELoss()
     optimizer = optim.Adam(model.parameters(), lr=TRAIN_CONFIG['learning_rate'], \
@@ -133,10 +132,11 @@ def train(expr: str, operation_suffix: str) -> None:
             # train for one epoch
             loss_sum = 0.0
             for batch_idx, (X, y) in enumerate(train_loader):
-                pbar.set_description(f"epoch {epoch:>3} batch {batch_idx:>3}/" \
-                                     f"{(len(train_loader)//TRAIN_CONFIG['batch_size'])-1:>3}" \
-                                     f"loss {loss_sum/max(TRAIN_CONFIG['batch_size']*batch_idx,1):10.5f}" \
-                                     f" acc xx.xx")
+                if verbose:
+                    pbar.set_description(f"epoch {epoch:>3} batch {batch_idx:>3}/" \
+                                        f"{(len(train_loader)//TRAIN_CONFIG['batch_size'])-1:>3}" \
+                                        f"loss {loss_sum/max(TRAIN_CONFIG['batch_size']*batch_idx,1):10.5f}" \
+                                        f" acc xx.xx")
                 pred = model.forward(X)
                 loss = loss_fn(pred, y)
                 optimizer.zero_grad()
@@ -145,32 +145,99 @@ def train(expr: str, operation_suffix: str) -> None:
                 loss_sum += loss.item()
 
             # evaluate performance
-            pbar.set_description(f'epoch {epoch:>3} EVAL')
+            if verbose:
+                pbar.set_description(f'epoch {epoch:>3} EVAL')
             model.eval()
             with torch.no_grad():
                 no_correct = 0
                 for test_batch_idx, (X, y) in enumerate(test_loader):
                     pred = model.forward(X)
-                    # pred = torch.where(nn.Sigmoid()(pred) > 0.5, 1, 0)
-                    # no_correct += (pred.squeeze() == y).type(torch.float).sum().item()
                     no_correct += torch.sum(torch.round(pred) == y).item()
-                    pbar.set_description(f"epoch {epoch:>3} EVAL batch {test_batch_idx:>3}/" \
-                                         f"{(len(test_loader)//TEST_CONFIG['batch_size'])-1:>3}")
+                    if verbose:
+                        pbar.set_description(f"epoch {epoch:>3} EVAL batch {test_batch_idx:>3}/" \
+                                            f"{(len(test_loader)//TEST_CONFIG['batch_size'])-1:>3}")
 
             model.train()
             losses += [ loss_sum / len(train_loader) ]
             accs += [ no_correct / len(test_loader) * 100 ]
-
-            pbar.set_description(f"epoch {epoch:>3} batch {batch_idx:>3}/" \
-                                 f"{(len(train_loader)//TRAIN_CONFIG['batch_size'])-1:>3} " \
-                                 f" loss {losses[-1]:10.5f} acc {accs[-1]:5.2f}")
-            print()
+           
+            if verbose:
+                pbar.set_description(f"epoch {epoch:>3} batch {batch_idx:>3}/" \
+                                    f"{(len(train_loader)//TRAIN_CONFIG['batch_size'])-1:>3} " \
+                                    f" loss {losses[-1]:10.5f} acc {accs[-1]:5.2f}")
+                print()
 
         for idx, (x, y) in enumerate(test_loader):
             res = model.forward(x)
-            print(f"x={x[0][0].squeeze():>5.0f} y={x[0][1].squeeze():>5.0f} " \
-                  f"res={y.item():5.2f} pred={res.item():5.2f}", end="\r", flush=True)
+
+            if verbose:
+                print(f"x={x[0][0].squeeze():>5.0f} y={x[0][1].squeeze():>5.0f} " \
+                    f"res={y.item():5.2f} pred={res.item():5.2f}", end="\r", flush=True)
             if idx == 50:
                 break
+
     # save model
     save_model(model, operation_suffix)
+    return model
+
+
+def non_verbose_train(expr: str, operation_suffix: str) -> None:
+    """
+    Non verbose function to train the model with the specified parameters. Saves the model in every
+    epoch specified in SAVE_EPOCHS. Prints the model status during the training.
+
+    Parameters:
+        expr: the operation expression to train the model on
+        operation_suffix: the suffix of the operation to create the save path with
+
+    Returns:
+        model: trained pytorch model (but also saves the model in the specified path)
+    """
+    # input dimension of the model is the length of the dictionary
+    model = MBAModel().to(TRAIN_CONFIG['device'])
+
+    loss_fn = nn.MSELoss()
+    optimizer = optim.Adam(model.parameters(), lr=TRAIN_CONFIG['learning_rate'],
+                           weight_decay=TRAIN_CONFIG['weight_decay'])
+    train_loader, test_loader = get_loaders(expr)
+
+    losses = [0.0]
+    accs = [0]
+
+    for epoch in range(1, TRAIN_CONFIG['epochs']+1):
+        # train for one epoch
+        loss_sum = 0.0
+        for batch_idx, (X, y) in enumerate(train_loader):
+            pred = model.forward(X)
+            loss = loss_fn(pred, y)
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+            loss_sum += loss.item()
+
+        # evaluate performance
+
+        model.eval()
+        with torch.no_grad():
+            no_correct = 0
+            for test_batch_idx, (X, y) in enumerate(test_loader):
+                pred = model.forward(X)
+                no_correct += torch.sum(torch.round(pred) == y).item()
+
+        model.train()
+        losses += [loss_sum / len(train_loader)]
+        accs += [no_correct / len(test_loader) * 100]
+
+    for idx, (x, y) in enumerate(test_loader):
+        res = model.forward(x)
+
+        if idx == 50:
+            break
+
+    # save model
+    save_model(model, operation_suffix)
+    return model
+
+
+def train_mapping() -> None:
+    pass

@@ -10,8 +10,11 @@ import torch
 import numpy as np
 
 from neural_mba.train import train
+from neural_mba.utils import create_datasets
 
 torch.backends.cudnn.benchmark = True
+
+DATASET_SIZE = 1000
 
 
 def main() -> None:
@@ -25,10 +28,14 @@ def main() -> None:
     print("#"*55)
     print()
 
-    # ---------------- Train MBA Model ----------------
-    train("x+y", "add")
-    train("x-y", "sub")
-    train("x*y", "mul")
+    # ---------------- Train MBA Model --------------------
+    # _ = train("x+y", "add")
+    # _ = train("x-y", "sub")
+    # _ = train("x*y", "mul")
+
+    # ---------------- Create Mapping Dataset -------------
+    create_datasets(DATASET_SIZE*0.8, DATASET_SIZE*0.2)
+
 
     # ---------------- Train Mapping Model ----------------
 
