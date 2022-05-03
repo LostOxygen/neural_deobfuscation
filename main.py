@@ -9,13 +9,13 @@ import os
 import torch
 import numpy as np
 
-from neural_mba.train import train
+from neural_mba.train import train, train_mapping
 from neural_mba.utils import create_datasets
 
 torch.backends.cudnn.benchmark = True
 
-DATASET_SIZE = 1000
-
+DATASET_SIZE = 100
+DATA_PATH = "./data/"
 
 def main() -> None:
     """main function for lda stability testing"""
@@ -34,10 +34,11 @@ def main() -> None:
     # _ = train("x*y", "mul")
 
     # ---------------- Create Mapping Dataset -------------
-    create_datasets(DATASET_SIZE*0.8, DATASET_SIZE*0.2)
-
+    if not os.path.isfile(DATA_PATH+"train_data.tar"):
+        create_datasets(train_size=int(DATASET_SIZE*0.8), test_size=int(DATASET_SIZE*0.2))
 
     # ---------------- Train Mapping Model ----------------
+    train_mapping(epochs=100, batch_size=32)
 
     end = time.perf_counter()
     duration = (np.round(end - start) / 60.) / 60.

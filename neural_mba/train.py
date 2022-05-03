@@ -8,15 +8,17 @@ from torchsummary import summary
 from typing import Any, Dict
 from tqdm import trange
 import numpy as np
+import webdataset as wds
 
 from neural_mba.datasets import MBADataset
 from neural_mba.models import MBAModel
 
-SAVE_EPOCHS = [0, 25, 50, 75, 100, 125, 150, 175, 200]
+
 MODEL_PATH = "./models/"
+DATA_PATH = "./data/"
+
 
 TRAIN_CONFIG: Dict[str, Any] = {
-    #'training_expr' : '(x ^ y) + 2 * ( x & y)',
     'training_samples' : 10000,
     'device' : 'cuda',
     'epochs' : 3,
@@ -72,6 +74,31 @@ def adjust_learning_rate(optimizer, epoch: int, epochs: int, learning_rate: int)
         new_lr /= 10
     for param_group in optimizer.param_groups:
         param_group['lr'] = new_lr
+
+    
+def get_mapping_loaders(batch_size: int) -> DataLoader:
+    """
+    Helper function to create the dataloader for network weights to operation mapping.
+
+    Parameters:
+        batch_size: the batch size to use for the mapping dataloaders
+    
+    Returns:
+        train_loader: the dataloader for the training
+        test_loader: the dataloader for the test
+    """
+    train_data_path = DATA_PATH + "train_data.tar"
+    test_data_path = DATA_PATH + "test_data.tar"
+
+    # build a wds dataset, shuffle it, decode the data and create dense tensors from sparse ones
+    train_dataset = wds.WebDataset(train_data_path).shuffle(100).decode().to_tuple("input.pyd",
+                                                                                    "output.pyd")
+    test_dataset = wds.WebDataset(test_data_path).decode().to_tuple("input.pyd", "output.pyd")
+
+    train_loader = DataLoader((train_dataset.batched(batch_size)), batch_size=None, num_workers=0)
+    test_loader = DataLoader((test_dataset.batched(batch_size)), batch_size=None, num_workers=0)
+
+    return train_loader, test_loader
 
 
 def get_loaders(expr: str) -> DataLoader:
@@ -184,7 +211,8 @@ def train(expr: str, operation_suffix: str, verbose: bool) -> None:
 def non_verbose_train(expr: str, operation_suffix: str) -> None:
     """
     Non verbose function to train the model with the specified parameters. Saves the model in every
-    epoch specified in SAVE_EPOCHS. Prints the model status during the training.
+    epoch specified in SAVE_EPOCHS. This function also do not evaluates any train/test accuracy due
+    to maximize performance.
 
     Parameters:
         expr: the operation expression to train the model on
@@ -199,15 +227,12 @@ def non_verbose_train(expr: str, operation_suffix: str) -> None:
     loss_fn = nn.MSELoss()
     optimizer = optim.Adam(model.parameters(), lr=TRAIN_CONFIG['learning_rate'],
                            weight_decay=TRAIN_CONFIG['weight_decay'])
-    train_loader, test_loader = get_loaders(expr)
+    train_loader, _ = get_loaders(expr)
 
-    losses = [0.0]
-    accs = [0]
-
-    for epoch in range(1, TRAIN_CONFIG['epochs']+1):
+    for _ in range(1, TRAIN_CONFIG['epochs']+1):
         # train for one epoch
         loss_sum = 0.0
-        for batch_idx, (X, y) in enumerate(train_loader):
+        for _, (X, y) in enumerate(train_loader):
             pred = model.forward(X)
             loss = loss_fn(pred, y)
             optimizer.zero_grad()
@@ -215,29 +240,35 @@ def non_verbose_train(expr: str, operation_suffix: str) -> None:
             optimizer.step()
             loss_sum += loss.item()
 
-        # evaluate performance
-
-        model.eval()
-        with torch.no_grad():
-            no_correct = 0
-            for test_batch_idx, (X, y) in enumerate(test_loader):
-                pred = model.forward(X)
-                no_correct += torch.sum(torch.round(pred) == y).item()
-
         model.train()
-        losses += [loss_sum / len(train_loader)]
-        accs += [no_correct / len(test_loader) * 100]
-
-    for idx, (x, y) in enumerate(test_loader):
-        res = model.forward(x)
-
-        if idx == 50:
-            break
 
     # save model
     save_model(model, operation_suffix)
     return model
 
 
-def train_mapping() -> None:
-    pass
+def train_mapping(epochs: int, batch_size: int) -> None:
+    """
+    Function to train the network on the weights-operator mapping. Saves the model in every
+    epoch specified in SAVE_EPOCHS. Prints the model status during the training.
+
+    Parameters:
+        epochs: the number of epochs to train the model
+        batch_size: the batch size to use for training
+
+    Returns:
+        None
+    """
+    train_loader, test_loader = get_mapping_loaders(batch_size)
+
+    for epoch in range(0, epochs):
+
+        # iterates over a batch of training data
+        for batch_idx, (inputs, targets) in enumerate(train_loader):
+            inputs = inputs.to(TRAIN_CONFIG['device'])
+            targets = targets.to(TRAIN_CONFIG['device'])
+
+            print(inputs, targets)
+            break
+
+
