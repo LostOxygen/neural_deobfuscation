@@ -23,7 +23,7 @@ def create_datasets(train_size: int, test_size: int) -> None:
     Returns:
         None
     """
-    print("[ saving train/test data and labels .. ]")
+    print("[ saving train/test data and labels ]")
     if not os.path.isdir(DATA_PATH):
         os.mkdir(DATA_PATH)
 
@@ -36,21 +36,21 @@ def create_datasets(train_size: int, test_size: int) -> None:
             match idx:
                 # 33% of the train data for "add"
                 case idx if idx >= 0 and idx < np.floor(train_size*0.33):
-                    label = torch.tensor([1, 0, 0])
+                    label = torch.LongTensor([0])
                     model = non_verbose_train("x+y", "add")
-                    model_weights = get_model_weights(model)
+                    model_weights = torch.FloatTensor(get_model_weights(model))
 
                 # 33% of the train data for "sub"
                 case idx if idx >= np.floor(train_size*0.33) and idx < np.floor(train_size*0.66):
-                    label = torch.tensor([0, 1, 0])
+                    label = torch.LongTensor([1])
                     model = non_verbose_train("x-y", "sub")
-                    model_weights = get_model_weights(model)
+                    model_weights = torch.FloatTensor(get_model_weights(model))
 
                 # 33% of the train data for "mul"
                 case idx if idx >= np.floor(train_size*0.66) and idx < train_size:
-                    label = torch.tensor([0, 0, 1])
+                    label = torch.LongTensor([2])
                     model = non_verbose_train("x*y", "mul")
-                    model_weights = get_model_weights(model)
+                    model_weights = torch.FloatTensor(get_model_weights(model))
 
             # save the model weights and the label as a tar file
             train_sink.write({
@@ -61,23 +61,23 @@ def create_datasets(train_size: int, test_size: int) -> None:
 
         for idx in tqdm(range(test_size)):
             match idx:
-                # 33% of the train data for "add"
-                case idx if idx >= 0 and idx < np.floor(train_size*0.33):
-                    label = torch.tensor([1, 0, 0])
+                # 33% of the test data for "add"
+                case idx if idx >= 0 and idx < np.floor(test_size*0.33):
+                    label = torch.LongTensor([0])
                     model = non_verbose_train("x+y", "add")
-                    model_weights = get_model_weights(model)
+                    model_weights = torch.FloatTensor(get_model_weights(model))
 
-                # 33% of the train data for "sub"
-                case idx if idx >= np.floor(train_size*0.33) and idx < np.floor(train_size*0.66):
-                    label = torch.tensor([0, 1, 0])
+                # 33% of the test data for "sub"
+                case idx if idx >= np.floor(test_size*0.33) and idx < np.floor(test_size*0.66):
+                    label = torch.LongTensor([1])
                     model = non_verbose_train("x-y", "sub")
-                    model_weights = get_model_weights(model)
+                    model_weights = torch.FloatTensor(get_model_weights(model))
 
-                # 33% of the train data for "mul"
-                case idx if idx >= np.floor(train_size*0.66) and idx < train_size:
-                    label = torch.tensor([0, 0, 1])
+                # 33% of the test data for "mul"
+                case idx if idx >= np.floor(test_size*0.66) and idx < test_size:
+                    label = torch.LongTensor([2])
                     model = non_verbose_train("x*y", "mul")
-                    model_weights = get_model_weights(model)
+                    model_weights = torch.FloatTensor(get_model_weights(model))
 
             # save the model weights and the label as a tar file
             test_sink.write({

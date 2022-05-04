@@ -9,13 +9,15 @@ from typing import Any, Dict
 from tqdm import trange
 import numpy as np
 import webdataset as wds
+import pkbar
 
 from neural_mba.datasets import MBADataset
-from neural_mba.models import MBAModel
+from neural_mba.models import MBAModel, MappingModel
 
 
 MODEL_PATH = "./models/"
 DATA_PATH = "./data/"
+DEVICE = 'cuda:0' if torch.cuda.is_available() else 'cpu'
 
 
 TRAIN_CONFIG: Dict[str, Any] = {
@@ -93,7 +95,7 @@ def get_mapping_loaders(batch_size: int) -> DataLoader:
     # build a wds dataset, shuffle it, decode the data and create dense tensors from sparse ones
     train_dataset = wds.WebDataset(train_data_path).shuffle(100).decode().to_tuple("input.pyd",
                                                                                     "output.pyd")
-    test_dataset = wds.WebDataset(test_data_path).decode().to_tuple("input.pyd", "output.pyd")
+    test_dataset = wds.WebDataset(test_data_path).shuffle(100).decode().to_tuple("input.pyd", "output.pyd")
 
     train_loader = DataLoader((train_dataset.batched(batch_size)), batch_size=None, num_workers=0)
     test_loader = DataLoader((test_dataset.batched(batch_size)), batch_size=None, num_workers=0)
@@ -114,13 +116,13 @@ def get_loaders(expr: str) -> DataLoader:
     """
     train_dataset = MBADataset(expr, \
                      TRAIN_CONFIG['training_samples'], \
-                     device=TRAIN_CONFIG['device'])
+                     device=DEVICE)
     train_loader = DataLoader(train_dataset,
                     batch_size=TRAIN_CONFIG['batch_size'], shuffle=True,
                     drop_last=True)
     test_dataset = MBADataset(expr,
                         TEST_CONFIG['samples'], \
-                        device=TEST_CONFIG['device'])
+                        device=DEVICE)
     test_loader = DataLoader(test_dataset,
                     batch_size=TEST_CONFIG['batch_size'], shuffle=True,
                     drop_last=True)
@@ -142,7 +144,7 @@ def train(expr: str, operation_suffix: str, verbose: bool) -> None:
         model: trained pytorch model (but also saves the model in the specified path)
     """
     # input dimension of the model is the length of the dictionary
-    model = MBAModel().to(TRAIN_CONFIG['device'])
+    model = MBAModel().to(DEVICE)
     if verbose:
         summary(model, input_size=(2,))
 
@@ -222,7 +224,7 @@ def non_verbose_train(expr: str, operation_suffix: str) -> None:
         model: trained pytorch model (but also saves the model in the specified path)
     """
     # input dimension of the model is the length of the dictionary
-    model = MBAModel().to(TRAIN_CONFIG['device'])
+    model = MBAModel().to(DEVICE)
 
     loss_fn = nn.MSELoss()
     optimizer = optim.Adam(model.parameters(), lr=TRAIN_CONFIG['learning_rate'],
@@ -247,7 +249,7 @@ def non_verbose_train(expr: str, operation_suffix: str) -> None:
     return model
 
 
-def train_mapping(epochs: int, batch_size: int) -> None:
+def train_mapping(epochs: int, batch_size: int, dataset_size: int) -> None:
     """
     Function to train the network on the weights-operator mapping. Saves the model in every
     epoch specified in SAVE_EPOCHS. Prints the model status during the training.
@@ -255,20 +257,76 @@ def train_mapping(epochs: int, batch_size: int) -> None:
     Parameters:
         epochs: the number of epochs to train the model
         batch_size: the batch size to use for training
+        dataset_size: the size of the complete dataset
 
     Returns:
         None
     """
+    net = MappingModel().to(DEVICE)
     train_loader, test_loader = get_mapping_loaders(batch_size)
 
+    criterion = nn.CrossEntropyLoss()
+    optimizer = optim.SGD(net.parameters(), TRAIN_CONFIG["learning_rate"], 0.9, 5e-4)
+
     for epoch in range(0, epochs):
+        # every epoch a new progressbar is created
+        # also, depending on the epoch the learning rate gets adjusted before
+        # the network is set into training mode
+        kbar = pkbar.Kbar(target=int(dataset_size/batch_size), epoch=epoch, num_epochs=epochs,
+                          width=20, always_stateful=True)
+        adjust_learning_rate(optimizer, epoch, epochs, TRAIN_CONFIG["learning_rate"])
+        net.train()
+        correct = 0
+        total = 0
+        running_loss = 0.0
 
         # iterates over a batch of training data
         for batch_idx, (inputs, targets) in enumerate(train_loader):
-            inputs = inputs.to(TRAIN_CONFIG['device'])
-            targets = targets.to(TRAIN_CONFIG['device'])
+            inputs = inputs.to(DEVICE)
+            targets = targets.squeeze().to(DEVICE)
+            optimizer.zero_grad()
+            outputs = net(inputs)
+            loss = criterion(outputs, targets)
+            loss.backward()
 
-            print(inputs, targets)
-            break
+            optimizer.step()
+            _, predicted = outputs.max(1)
+
+            # calculate the current running loss as well as the total accuracy
+            # and update the progressbar accordingly
+            running_loss += loss.item()
+            total += targets.size(0)
+            correct += predicted.eq(targets).sum().item()
+
+            kbar.update(batch_idx, values=[("loss", running_loss/(batch_idx+1)),
+                                           ("acc", 100. * correct / total)])
+        # calculate the test accuracy of the network at the end of each epoch
+        with torch.no_grad():
+            net.eval()
+            t_total = 0
+            t_correct = 0
+            for _, (inputs_t, targets_t) in enumerate(test_loader):
+                inputs_t = inputs_t.to(DEVICE)
+                targets_t = targets_t.squeeze().to(DEVICE)
+                outputs_t = net(inputs_t)
+                _, predicted_t = outputs_t.max(1)
+                t_total += targets_t.size(0)
+                t_correct += predicted_t.eq(targets_t).sum().item()
+            print("-> test acc: {}".format(100.*t_correct/t_total))
+
+    save_model(net, "mapping")
+
+    # calculate the test accuracy of the network at the end of the training
+    with torch.no_grad():
+        net.eval()
+        t_total = 0
+        t_correct = 0
+        for _, (inputs_t, targets_t) in enumerate(test_loader):
+            inputs_t = inputs_t.to(DEVICE)
+            targets_t = targets_t.squeeze().to(DEVICE)
+            outputs_t = net(inputs_t)
+            _, predicted_t = outputs_t.max(1)
+            t_total += targets_t.size(0)
+            t_correct += predicted_t.eq(targets_t).sum().item()
 
 

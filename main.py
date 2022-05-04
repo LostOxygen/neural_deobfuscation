@@ -38,7 +38,7 @@ def main() -> None:
         create_datasets(train_size=int(DATASET_SIZE*0.8), test_size=int(DATASET_SIZE*0.2))
 
     # ---------------- Train Mapping Model ----------------
-    train_mapping(epochs=100, batch_size=32)
+    train_mapping(epochs=100, batch_size=32, dataset_size=int(DATASET_SIZE*0.8))
 
     end = time.perf_counter()
     duration = (np.round(end - start) / 60.) / 60.
