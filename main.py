@@ -14,7 +14,7 @@ from neural_mba.utils import create_datasets
 
 torch.backends.cudnn.benchmark = True
 
-DATASET_SIZE = 100
+DATASET_SIZE = 10000
 DATA_PATH = "./data/"
 
 def main() -> None:
