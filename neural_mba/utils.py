@@ -97,7 +97,7 @@ def get_model_weights(model: nn.Sequential) -> torch.Tensor:
         model: nn.Sequential model to extract the weights from
 
     Returns:
-        weights: 1D tensor of the flattened weights
+        weights: 1D tensor of the flattened weights on CPU device
     """
     weights = None
     for layer in model.layers:
@@ -107,4 +107,4 @@ def get_model_weights(model: nn.Sequential) -> torch.Tensor:
             else:
                 weights = torch.cat((weights, layer.weight.data.flatten()), 0)
 
-    return weights
+    return weights.cpu()
