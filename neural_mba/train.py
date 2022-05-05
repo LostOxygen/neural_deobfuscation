@@ -17,7 +17,7 @@ from neural_mba.models import MBAModel, MappingModel
 
 MODEL_PATH = "./models/"
 DATA_PATH = "./data/"
-DEVICE = 'cuda:0' if torch.cuda.is_available() else 'cpu'
+DEVICE = 'cuda:1' if torch.cuda.is_available() else 'cpu'
 
 
 TRAIN_CONFIG: Dict[str, Any] = {
