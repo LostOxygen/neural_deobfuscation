@@ -17,9 +17,15 @@ torch.backends.cudnn.benchmark = True
 DATASET_SIZE = 10000
 DATA_PATH = "./data/"
 
-def main() -> None:
+def main(gpu: int) -> None:
     """main function for lda stability testing"""
     start = time.perf_counter()
+
+    if gpu == 0:
+        device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
+    if gpu == 1:
+        device = 'cuda:1' if torch.cuda.is_available() else 'cpu'
+
     print("\n\n\n"+"#"*55)
     print("## " + str(datetime.datetime.now().strftime("%A, %d. %B %Y %I:%M%p")))
     print(f"## System: {torch.get_num_threads()} CPU cores with "
@@ -29,16 +35,18 @@ def main() -> None:
     print()
 
     # ---------------- Train MBA Model --------------------
-    # _ = train("x+y", "add")
-    # _ = train("x-y", "sub")
-    # _ = train("x*y", "mul")
+    # _ = train("x+y", "add", device=device)
+    # _ = train("x-y", "sub", device=device)
+    # _ = train("x*y", "mul", device=device)
 
     # ---------------- Create Mapping Dataset -------------
     if not os.path.isfile(DATA_PATH+"train_data.tar"):
-        create_datasets(train_size=int(DATASET_SIZE*0.8), test_size=int(DATASET_SIZE*0.2))
+        create_datasets(train_size=int(DATASET_SIZE*0.8),
+                        test_size=int(DATASET_SIZE*0.2),
+                        device=device)
 
     # ---------------- Train Mapping Model ----------------
-    train_mapping(epochs=100, batch_size=32, dataset_size=int(DATASET_SIZE*0.8))
+    train_mapping(epochs=100, batch_size=32, dataset_size=int(DATASET_SIZE*0.8), device=device)
 
     end = time.perf_counter()
     duration = (np.round(end - start) / 60.) / 60.
@@ -47,5 +55,6 @@ def main() -> None:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
+    parser.add_argument("--gpu", "-g", help="GPU", type=int, default=0)
     args = parser.parse_args()
     main(**vars(args))

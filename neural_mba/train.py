@@ -17,8 +17,6 @@ from neural_mba.models import MBAModel, MappingModel
 
 MODEL_PATH = "./models/"
 DATA_PATH = "./data/"
-DEVICE = 'cuda:1' if torch.cuda.is_available() else 'cpu'
-
 
 TRAIN_CONFIG: Dict[str, Any] = {
     'training_samples' : 10000,
@@ -104,12 +102,13 @@ def get_mapping_loaders(batch_size: int) -> DataLoader:
     return train_loader, test_loader
 
 
-def get_loaders(expr: str) -> DataLoader:
+def get_loaders(expr: str, device: str) -> DataLoader:
     """
     Helper function to create the dataloader for the training and the test.
 
     Parameters:
         expr: the operation expression to train the model on
+        device: cpu or cuda device string
     
     Returns:
         train_loader: the dataloader for the training
@@ -117,13 +116,13 @@ def get_loaders(expr: str) -> DataLoader:
     """
     train_dataset = MBADataset(expr, \
                      TRAIN_CONFIG['training_samples'], \
-                     device=DEVICE)
+                               device=device)
     train_loader = DataLoader(train_dataset,
                     batch_size=TRAIN_CONFIG['batch_size'], shuffle=True,
                     drop_last=True)
     test_dataset = MBADataset(expr,
                         TEST_CONFIG['samples'], \
-                        device=DEVICE)
+                        device=device)
     test_loader = DataLoader(test_dataset,
                     batch_size=TEST_CONFIG['batch_size'], shuffle=True,
                     drop_last=True)
@@ -131,7 +130,7 @@ def get_loaders(expr: str) -> DataLoader:
     return train_loader, test_loader
 
 
-def train(expr: str, operation_suffix: str, verbose: bool) -> None:
+def train(expr: str, operation_suffix: str, verbose: bool, device: str) -> None:
     """
     Main function to train the model with the specified parameters. Saves the model in every
     epoch specified in SAVE_EPOCHS. Prints the model status during the training.
@@ -140,19 +139,20 @@ def train(expr: str, operation_suffix: str, verbose: bool) -> None:
         expr: the operation expression to train the model on
         operation_suffix: the suffix of the operation to create the save path with
         verbose: if True, prints the training status
+        device: cpu or cuda device string
 
     Returns:
         model: trained pytorch model (but also saves the model in the specified path)
     """
     # input dimension of the model is the length of the dictionary
-    model = MBAModel().to(DEVICE)
+    model = MBAModel().to(device)
     if verbose:
         summary(model, input_size=(2,))
 
     loss_fn = nn.MSELoss()
     optimizer = optim.Adam(model.parameters(), lr=TRAIN_CONFIG['learning_rate'], \
                            weight_decay=TRAIN_CONFIG['weight_decay'])
-    train_loader, test_loader = get_loaders(expr)
+    train_loader, test_loader = get_loaders(expr, device)
 
     with trange(1, TRAIN_CONFIG['epochs']+1, bar_format='{l_bar}{bar:30}{r_bar}') as pbar:
         losses = [0.0]
@@ -211,7 +211,7 @@ def train(expr: str, operation_suffix: str, verbose: bool) -> None:
     return model
 
 
-def non_verbose_train(expr: str, operation_suffix: str) -> None:
+def non_verbose_train(expr: str, operation_suffix: str, device: str) -> None:
     """
     Non verbose function to train the model with the specified parameters. Saves the model in every
     epoch specified in SAVE_EPOCHS. This function also do not evaluates any train/test accuracy due
@@ -220,17 +220,18 @@ def non_verbose_train(expr: str, operation_suffix: str) -> None:
     Parameters:
         expr: the operation expression to train the model on
         operation_suffix: the suffix of the operation to create the save path with
+        device: cpu or cuda device string
 
     Returns:
         model: trained pytorch model (but also saves the model in the specified path)
     """
     # input dimension of the model is the length of the dictionary
-    model = MBAModel().to(DEVICE)
+    model = MBAModel().to(device)
 
     loss_fn = nn.MSELoss()
     optimizer = optim.Adam(model.parameters(), lr=TRAIN_CONFIG['learning_rate'],
                            weight_decay=TRAIN_CONFIG['weight_decay'])
-    train_loader, _ = get_loaders(expr)
+    train_loader, _ = get_loaders(expr, device)
 
     for _ in range(1, TRAIN_CONFIG['epochs']+1):
         # train for one epoch
@@ -250,7 +251,7 @@ def non_verbose_train(expr: str, operation_suffix: str) -> None:
     return model
 
 
-def train_mapping(epochs: int, batch_size: int, dataset_size: int) -> None:
+def train_mapping(epochs: int, batch_size: int, dataset_size: int, device: str) -> None:
     """
     Function to train the network on the weights-operator mapping. Saves the model in every
     epoch specified in SAVE_EPOCHS. Prints the model status during the training.
@@ -259,11 +260,12 @@ def train_mapping(epochs: int, batch_size: int, dataset_size: int) -> None:
         epochs: the number of epochs to train the model
         batch_size: the batch size to use for training
         dataset_size: the size of the complete dataset
+        device: cpu or cuda device string
 
     Returns:
         None
     """
-    net = MappingModel().to(DEVICE)
+    net = MappingModel().to(device)
     train_loader, test_loader = get_mapping_loaders(batch_size)
 
     criterion = nn.CrossEntropyLoss()
@@ -283,8 +285,8 @@ def train_mapping(epochs: int, batch_size: int, dataset_size: int) -> None:
 
         # iterates over a batch of training data
         for batch_idx, (inputs, targets) in enumerate(train_loader):
-            inputs = inputs.to(DEVICE)
-            targets = targets.squeeze().to(DEVICE)
+            inputs = inputs.to(device)
+            targets = targets.squeeze().to(device)
             optimizer.zero_grad()
             outputs = net(inputs)
             loss = criterion(outputs, targets)
@@ -307,8 +309,8 @@ def train_mapping(epochs: int, batch_size: int, dataset_size: int) -> None:
             t_total = 0
             t_correct = 0
             for _, (inputs_t, targets_t) in enumerate(test_loader):
-                inputs_t = inputs_t.to(DEVICE)
-                targets_t = targets_t.squeeze().to(DEVICE)
+                inputs_t = inputs_t.to(device)
+                targets_t = targets_t.squeeze().to(device)
                 outputs_t = net(inputs_t)
                 _, predicted_t = outputs_t.max(1)
                 t_total += targets_t.size(0)
@@ -323,8 +325,8 @@ def train_mapping(epochs: int, batch_size: int, dataset_size: int) -> None:
         t_total = 0
         t_correct = 0
         for _, (inputs_t, targets_t) in enumerate(test_loader):
-            inputs_t = inputs_t.to(DEVICE)
-            targets_t = targets_t.squeeze().to(DEVICE)
+            inputs_t = inputs_t.to(device)
+            targets_t = targets_t.squeeze().to(device)
             outputs_t = net(inputs_t)
             _, predicted_t = outputs_t.max(1)
             t_total += targets_t.size(0)
