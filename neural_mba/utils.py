@@ -39,19 +39,19 @@ def create_datasets(train_size: int, test_size: int, device: str) -> None:
                 # 33% of the train data for "add"
                 case idx if idx >= 0 and idx < np.floor(train_size*0.33):
                     label = torch.LongTensor([0])
-                    model = non_verbose_train("x+y", "add").to(device)
+                    model = non_verbose_train("x+y", "add", device)
                     model_weights = torch.FloatTensor(get_model_weights(model))
 
                 # 33% of the train data for "sub"
                 case idx if idx >= np.floor(train_size*0.33) and idx < np.floor(train_size*0.66):
                     label = torch.LongTensor([1])
-                    model = non_verbose_train("x-y", "sub").to(device)
+                    model = non_verbose_train("x-y", "sub", device)
                     model_weights = torch.FloatTensor(get_model_weights(model))
 
                 # 33% of the train data for "mul"
                 case idx if idx >= np.floor(train_size*0.66) and idx < train_size:
                     label = torch.LongTensor([2])
-                    model = non_verbose_train("x*y", "mul").to(device)
+                    model = non_verbose_train("x*y", "mul", device)
                     model_weights = torch.FloatTensor(get_model_weights(model))
 
             # save the model weights and the label as a tar file
@@ -66,19 +66,19 @@ def create_datasets(train_size: int, test_size: int, device: str) -> None:
                 # 33% of the test data for "add"
                 case idx if idx >= 0 and idx < np.floor(test_size*0.33):
                     label = torch.LongTensor([0])
-                    model = non_verbose_train("x+y", "add").to(device)
+                    model = non_verbose_train("x+y", "add", device)
                     model_weights = torch.FloatTensor(get_model_weights(model))
 
                 # 33% of the test data for "sub"
                 case idx if idx >= np.floor(test_size*0.33) and idx < np.floor(test_size*0.66):
                     label = torch.LongTensor([1])
-                    model = non_verbose_train("x-y", "sub").to(device)
+                    model = non_verbose_train("x-y", "sub", device)
                     model_weights = torch.FloatTensor(get_model_weights(model))
 
                 # 33% of the test data for "mul"
                 case idx if idx >= np.floor(test_size*0.66) and idx < test_size:
                     label = torch.LongTensor([2])
-                    model = non_verbose_train("x*y", "mul").to(device)
+                    model = non_verbose_train("x*y", "mul", device)
                     model_weights = torch.FloatTensor(get_model_weights(model))
 
             # save the model weights and the label as a tar file
