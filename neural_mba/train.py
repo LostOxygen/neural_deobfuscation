@@ -93,9 +93,10 @@ def get_mapping_loaders(batch_size: int) -> DataLoader:
     test_data_path = DATA_PATH + "test_data.tar"
 
     # build a wds dataset, shuffle it, decode the data and create dense tensors from sparse ones
-    train_dataset = wds.WebDataset(train_data_path).shuffle(100).decode().to_tuple("input.pyd",
+    train_dataset = wds.WebDataset(train_data_path).shuffle(1000).decode().to_tuple("input.pyd",
                                                                                     "output.pyd")
-    test_dataset = wds.WebDataset(test_data_path).shuffle(100).decode().to_tuple("input.pyd", "output.pyd")
+    test_dataset = wds.WebDataset(test_data_path).shuffle(1000).decode().to_tuple("input.pyd",
+                                                                                  "output.pyd")
 
     train_loader = DataLoader((train_dataset.batched(batch_size)), batch_size=None, num_workers=0)
     test_loader = DataLoader((test_dataset.batched(batch_size)), batch_size=None, num_workers=0)
@@ -266,15 +267,15 @@ def train_mapping(epochs: int, batch_size: int, dataset_size: int) -> None:
     train_loader, test_loader = get_mapping_loaders(batch_size)
 
     criterion = nn.CrossEntropyLoss()
-    optimizer = optim.SGD(net.parameters(), TRAIN_CONFIG["learning_rate"], 0.9, 5e-4)
+    optimizer = optim.SGD(net.parameters(), 0.1, 0.9, 5e-4)
 
     for epoch in range(0, epochs):
         # every epoch a new progressbar is created
         # also, depending on the epoch the learning rate gets adjusted before
         # the network is set into training mode
-        kbar = pkbar.Kbar(target=int(dataset_size/batch_size), epoch=epoch, num_epochs=epochs,
+        kbar = pkbar.Kbar(target=int(dataset_size/batch_size)-1, epoch=epoch, num_epochs=epochs,
                           width=20, always_stateful=True)
-        adjust_learning_rate(optimizer, epoch, epochs, TRAIN_CONFIG["learning_rate"])
+        adjust_learning_rate(optimizer, epoch, epochs, 0.1)
         net.train()
         correct = 0
         total = 0
