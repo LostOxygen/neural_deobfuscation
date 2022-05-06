@@ -10,7 +10,7 @@ import torch
 import numpy as np
 
 from neural_mba.train import train, train_mapping
-from neural_mba.utils import create_datasets
+from neural_mba.utils import create_datasets, test_model
 
 torch.backends.cudnn.benchmark = True
 
@@ -46,7 +46,10 @@ def main(gpu: int) -> None:
                         device=device)
 
     # ---------------- Train Mapping Model ----------------
-    train_mapping(epochs=100, batch_size=32, dataset_size=int(DATASET_SIZE*0.8), device=device)
+    # train_mapping(epochs=100, batch_size=512, dataset_size=int(DATASET_SIZE*0.8), device=device)
+
+    # ---------------- Test Mapping Model -----------------
+    test_model()
 
     end = time.perf_counter()
     duration = (np.round(end - start) / 60.) / 60.
