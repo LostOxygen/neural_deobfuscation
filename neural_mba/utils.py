@@ -129,7 +129,7 @@ def test_model() -> None:
     model.load_state_dict(checkpoint['net'], strict=False)
     model.eval()
 
-    total_tests = 100
+    total_tests = 1000
     correct_tests = 0
 
     for i in range(total_tests):

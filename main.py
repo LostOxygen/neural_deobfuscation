@@ -46,7 +46,7 @@ def main(gpu: int) -> None:
                         device=device)
 
     # ---------------- Train Mapping Model ----------------
-    # train_mapping(epochs=100, batch_size=512, dataset_size=int(DATASET_SIZE*0.8), device=device)
+    train_mapping(epochs=100, batch_size=512, dataset_size=int(DATASET_SIZE*0.8), device=device)
 
     # ---------------- Test Mapping Model -----------------
     test_model()
