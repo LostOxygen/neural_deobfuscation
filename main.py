@@ -1,4 +1,4 @@
-"""main file to run the lda approximation"""
+"""main file to run the neural deobfuscation"""
 # -*- coding: utf-8 -*-
 # !/usr/bin/env python3
 import time
@@ -18,7 +18,7 @@ DATASET_SIZE = 10000
 DATA_PATH = "./data/"
 
 def main(gpu: int) -> None:
-    """main function for lda stability testing"""
+    """main function for neural deobfuscation"""
     start = time.perf_counter()
 
     if gpu == 0:
