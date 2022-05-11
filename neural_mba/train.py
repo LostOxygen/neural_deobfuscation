@@ -266,7 +266,7 @@ def train_mapping(epochs: int, batch_size: int, dataset_size: int, device: str) 
         None
     """
     net = MappingModel().to(device)
-    summary(net, input_size=(16768,))
+    summary(net, input_size=(16768,), device=device)
     train_loader, test_loader = get_mapping_loaders(batch_size)
 
     criterion = nn.CrossEntropyLoss()
