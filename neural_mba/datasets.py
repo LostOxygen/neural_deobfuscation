@@ -1,11 +1,17 @@
+"""
+libary for generating random samples for a MBA expression.
+"""
+
 import torch
-from torch import nn
 import random
 from torch import Tensor
 from torch.utils.data import  Dataset
-from typing import Any, List, Iterator, Tuple
+from typing import Any, Iterator, Tuple
 
 class MBADataset(Dataset[Any]):
+    """
+    Dataset wrapper to generate random samples for a MBA expression.
+    """
 
     def __init__(self, expr: str, num_samples: int, device: str = "cuda:0"):
         super().__init__()

@@ -9,7 +9,7 @@ import os
 import torch
 import numpy as np
 
-from neural_mba.train import train, train_mapping
+from neural_mba.train import train_mapping
 from neural_mba.utils import create_datasets, test_model
 
 torch.backends.cudnn.benchmark = True

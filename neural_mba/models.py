@@ -1,4 +1,4 @@
-"""Model"""
+"""Model library"""
 import torch.nn as nn
 from torch import Tensor
 
