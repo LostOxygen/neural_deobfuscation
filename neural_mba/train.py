@@ -267,6 +267,16 @@ def train_mapping(epochs: int, batch_size: int, dataset_size: int, device: str) 
     net = MappingModel().to(device)
     summary(net, input_size=(16768,), device=device)
     train_loader, test_loader = get_mapping_loaders(batch_size)
+    try:
+        next(iter(train_loader))
+    except StopIteration:
+        print("No data found in the training set.")
+        return -1
+    try:
+        next(iter(test_loader))
+    except StopIteration:
+        print("No data found in the test set.")
+        return -1
 
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.SGD(net.parameters(), 0.1, 0.9, 5e-4)
