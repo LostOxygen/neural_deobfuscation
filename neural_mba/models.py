@@ -16,9 +16,10 @@ class MBAModel(nn.Module):
             nn.Linear(128, 1),
         )
 
-    def forward(self, x: Tensor) -> Tensor:
-        x = self.layers(x)
-        return x
+    def forward(self, x_val: Tensor) -> Tensor:
+        """forward pass method"""
+        x_val = self.layers(x_val)
+        return x_val
 
 
 class MappingModel(nn.Module):
@@ -55,6 +56,7 @@ class MappingModel(nn.Module):
             nn.Softmax(dim=-1)
         )
 
-    def forward(self, x: Tensor) -> Tensor:
-        x = self.layers(x)
-        return x
+    def forward(self, x_val: Tensor) -> Tensor:
+        """forward pass method"""
+        x_val = self.layers(x_val)
+        return x_val

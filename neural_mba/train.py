@@ -1,10 +1,12 @@
+"""library for training functionalities"""
+
 import os
+from typing import Any, Dict
 import torch
 from torch import optim
 from torch import nn
 from torch.utils.data import DataLoader
 from torchsummary import summary
-from typing import Any, Dict
 from tqdm import trange
 import numpy as np
 import webdataset as wds
@@ -160,7 +162,7 @@ def train(expr: str, operation_suffix: str, verbose: bool, device: str) -> None:
         for epoch in pbar:
             # train for one epoch
             loss_sum = 0.0
-            for batch_idx, (x, y) in enumerate(train_loader):
+            for batch_idx, (x_val, y_val) in enumerate(train_loader):
                 if verbose:
                     pbar.set_description(f"epoch {epoch:>3} batch {batch_idx:>3}/" \
                                         f"{(len(train_loader)//TRAIN_CONFIG['batch_size'])-1:>3}" \
@@ -196,12 +198,12 @@ def train(expr: str, operation_suffix: str, verbose: bool, device: str) -> None:
                                     f" loss {losses[-1]:10.5f} acc {accs[-1]:5.2f}")
                 print()
 
-        for idx, (x, y) in enumerate(test_loader):
+        for idx, (x_val, y_val) in enumerate(test_loader):
             res = model.forward(x)
 
             if verbose:
-                print(f"x={x[0][0].squeeze():>5.0f} y={x[0][1].squeeze():>5.0f} " \
-                    f"res={y.item():5.2f} pred={res.item():5.2f}", end="\r", flush=True)
+                print(f"x={x_val[0][0].squeeze():>5.0f} y={x[0][1].squeeze():>5.0f} " \
+                    f"res={y_val.item():5.2f} pred={res.item():5.2f}", end="\r", flush=True)
             if idx == 50:
                 break
 
@@ -298,7 +300,7 @@ def train_mapping(epochs: int, batch_size: int, dataset_size: int, device: str) 
             inputs = inputs.to(device)
             targets = targets.squeeze().to(device)
             optimizer.zero_grad()
-            outputs = net(inputs)
+            outputs = net(inputs)  # pylint: disable=not-callable
             loss = criterion(outputs, targets)
             loss.backward()
 
@@ -321,7 +323,7 @@ def train_mapping(epochs: int, batch_size: int, dataset_size: int, device: str) 
             for _, (inputs_t, targets_t) in enumerate(test_loader):
                 inputs_t = inputs_t.to(device)
                 targets_t = targets_t.squeeze().to(device)
-                outputs_t = net(inputs_t)
+                outputs_t = net(inputs_t)  # pylint: disable=not-callable
                 _, predicted_t = outputs_t.max(1)
                 t_total += targets_t.size(0)
                 t_correct += predicted_t.eq(targets_t).sum().item()
@@ -337,7 +339,7 @@ def train_mapping(epochs: int, batch_size: int, dataset_size: int, device: str) 
         for _, (inputs_t, targets_t) in enumerate(test_loader):
             inputs_t = inputs_t.to(device)
             targets_t = targets_t.squeeze().to(device)
-            outputs_t = net(inputs_t)
+            outputs_t = net(inputs_t)  # pylint: disable=not-callable
             _, predicted_t = outputs_t.max(1)
             t_total += targets_t.size(0)
             t_correct += predicted_t.eq(targets_t).sum().item()
