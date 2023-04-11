@@ -1,4 +1,4 @@
-from locale import strcoll
+"""utility library for creating mba datasets"""
 import os
 
 import torch
