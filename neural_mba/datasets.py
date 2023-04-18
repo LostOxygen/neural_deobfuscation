@@ -32,10 +32,10 @@ class MBADataset(Dataset[Any]):
         for _ in range(self.num_samples):
             x = random.randint(0, 2**8-1)
             y = random.randint(0, 2**8-1)
-            res = float(self.eval_expr(self.expr, x, y))
+            res = float(self.eval_expr(self.expr))
             # type: ignore
             yield torch.tensor([float(x), float(y)]), torch.tensor([res])
 
-    def eval_expr(self, expr_str: str, x_val: int, y_yal: int) -> Any:
+    def eval_expr(self, expr_str: str) -> Any:
         """returns the evaluation of the expression"""
         return eval(expr_str) # pylint: disable=eval-used
