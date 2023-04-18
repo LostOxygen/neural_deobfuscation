@@ -30,11 +30,11 @@ class MBADataset(Dataset[Any]):
     def sample(self) -> Iterator[Tuple[Tensor, Tensor]]:
         """generates random samples for the expression"""
         for _ in range(self.num_samples):
-            x = random.randint(0, 2**8-1)
-            y = random.randint(0, 2**8-1)
+            x_val = random.randint(0, 2**8-1)
+            y_val = random.randint(0, 2**8-1)
             res = float(self.eval_expr(self.expr))
             # type: ignore
-            yield torch.tensor([float(x), float(y)]), torch.tensor([res])
+            yield torch.tensor([float(x_val), float(y_val)]), torch.tensor([res])
 
     def eval_expr(self, expr_str: str) -> Any:
         """returns the evaluation of the expression"""
