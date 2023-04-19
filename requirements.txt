@@ -1,5 +1,4 @@
-wheel
-pytorch
+torch
 torchvision
 torchaudio
 numpy
