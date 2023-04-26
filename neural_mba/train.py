@@ -131,7 +131,7 @@ def get_loaders(expr: str, device: str) -> DataLoader:
     return train_loader, test_loader
 
 
-def train(expr: str, operation_suffix: str, verbose: bool, device: str) -> None:
+def train(expr: str, operation_suffix: str, verbose: bool, device: str) -> nn.Sequential:
     """
     Main function to train the model with the specified parameters. Saves the model in every
     epoch specified in SAVE_EPOCHS. Prints the model status during the training.
@@ -168,8 +168,8 @@ def train(expr: str, operation_suffix: str, verbose: bool, device: str) -> None:
                                         f"{(len(train_loader)//TRAIN_CONFIG['batch_size'])-1:>3}" \
                                         f"loss {loss_sum/max(TRAIN_CONFIG['batch_size']*batch_idx,1):10.5f}" \
                                         f" acc xx.xx")
-                pred = model.forward(x)
-                loss = loss_fn(pred, y)
+                pred = model.forward(x_val)
+                loss = loss_fn(pred, y_val)
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
@@ -181,9 +181,9 @@ def train(expr: str, operation_suffix: str, verbose: bool, device: str) -> None:
             model.eval()
             with torch.no_grad():
                 no_correct = 0
-                for test_batch_idx, (x, y) in enumerate(test_loader):
-                    pred = model.forward(x)
-                    no_correct += torch.sum(torch.round(pred) == y).item()
+                for test_batch_idx, (x_val, y_val) in enumerate(test_loader):
+                    pred = model.forward(x_val)
+                    no_correct += torch.sum(torch.round(pred) == y_val).item()
                     if verbose:
                         pbar.set_description(f"epoch {epoch:>3} EVAL batch {test_batch_idx:>3}/" \
                                             f"{(len(test_loader)//TEST_CONFIG['batch_size'])-1:>3}")
@@ -199,10 +199,10 @@ def train(expr: str, operation_suffix: str, verbose: bool, device: str) -> None:
                 print()
 
         for idx, (x_val, y_val) in enumerate(test_loader):
-            res = model.forward(x)
+            res = model.forward(x_val)
 
             if verbose:
-                print(f"x={x_val[0][0].squeeze():>5.0f} y={x[0][1].squeeze():>5.0f} " \
+                print(f"x={x_val[0][0].squeeze():>5.0f} y={x_val[0][1].squeeze():>5.0f} "
                     f"res={y_val.item():5.2f} pred={res.item():5.2f}", end="\r", flush=True)
             if idx == 50:
                 break

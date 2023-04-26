@@ -6,7 +6,8 @@ import random
 from typing import Any, Iterator, Tuple
 import torch
 from torch import Tensor
-from torch.utils.data import  Dataset
+from torch.utils.data import Dataset
+
 
 class MBADataset(Dataset[Any]):
     """
@@ -31,11 +32,11 @@ class MBADataset(Dataset[Any]):
         """generates random samples for the expression"""
         for _ in range(self.num_samples):
             x_val = random.randint(0, 2**8-1)
-            y_val = random.randint(0, 2**8-1)
-            res = float(self.eval_expr(self.expr))
+            y_yal = random.randint(0, 2**8-1)
+            res = float(self.eval_expr(self.expr, x_val, y_yal))
             # type: ignore
-            yield torch.tensor([float(x_val), float(y_val)]), torch.tensor([res])
+            yield torch.tensor([float(x_val), float(y_yal)]), torch.tensor([res])
 
-    def eval_expr(self, expr_str: str) -> Any:
+    def eval_expr(self, expr_str: str, x: int, y: int) -> Any:  # pylint: disable=unused-argument
         """returns the evaluation of the expression"""
-        return eval(expr_str) # pylint: disable=eval-used
+        return eval(expr_str)  # pylint: disable=eval-used
