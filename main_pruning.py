@@ -18,7 +18,7 @@ torch.backends.cudnn.benchmark = True
 COMPLEX_FUNCTION: Final[str] = "((- x) + (- ((- x) + ((- x) + (- y)))))"
 SIMPLE_FUNCTION: Final[str] = "x + y"
 
-def main(gpu: int) -> None:
+def main(gpu: int, prune_factor: float) -> None:
     """main function for neural deobfuscation"""
     start = time.perf_counter()
     if gpu == -1 or not torch.cuda.is_available():
@@ -32,6 +32,7 @@ def main(gpu: int) -> None:
           f"{os.cpu_count()} threads and "
           f"{torch.cuda.device_count()} GPUs on {socket.gethostname()}")
     print(f"## Using: {device}")
+    print(f"## Pruning Percentage: {prune_factor}")
     print("#"*55)
     print()
 
@@ -46,7 +47,7 @@ def main(gpu: int) -> None:
 
     prune.global_unstructured(parameters,
                               pruning_method=prune.L1Unstructured,
-                              amount=0.2)
+                              amount=prune_factor)
 
     test_pruning(model=model, expr=COMPLEX_FUNCTION, device=device)
 
@@ -58,5 +59,6 @@ def main(gpu: int) -> None:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--gpu", "-g", help="GPU", type=int, default=0)
+    parser.add_argument("--prune_factor", "-p", help="Prune the model", type=float, default=0.2)
     args = parser.parse_args()
     main(**vars(args))
