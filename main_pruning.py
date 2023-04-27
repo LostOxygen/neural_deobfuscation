@@ -8,9 +8,10 @@ import datetime
 import argparse
 import os
 import torch
+from torch.nn.utils import prune
 import numpy as np
 
-from neural_mba.train import train
+from neural_mba.train import train, test_pruning
 
 torch.backends.cudnn.benchmark = True
 
@@ -36,6 +37,18 @@ def main(gpu: int) -> None:
 
     # ---------------- Train MBA Model --------------------
     model = train(expr=COMPLEX_FUNCTION, operation_suffix="complex", verbose=True, device=device)
+
+    # prune the model
+    parameters = []
+    for module in model.layers.modules():
+        if isinstance(module, torch.nn.Linear):
+            parameters.append((module, "weight"))
+
+    prune.global_unstructured(parameters,
+                              pruning_method=prune.L1Unstructured,
+                              amount=0.2)
+
+    test_pruning(model=model, expr=COMPLEX_FUNCTION, device=device)
 
     end = time.perf_counter()
     duration = (np.round(end - start) / 60.) / 60.

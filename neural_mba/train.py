@@ -160,6 +160,7 @@ def train(expr: str, operation_suffix: str, verbose: bool, device: str) -> nn.Se
         accs = [0]
 
         for epoch in pbar:
+            model.train()
             # train for one epoch
             loss_sum = 0.0
             for batch_idx, (x_val, y_val) in enumerate(train_loader):
@@ -188,7 +189,6 @@ def train(expr: str, operation_suffix: str, verbose: bool, device: str) -> nn.Se
                         pbar.set_description(f"epoch {epoch:>3} EVAL batch {test_batch_idx:>3}/" \
                                             f"{(len(test_loader)//TEST_CONFIG['batch_size'])-1:>3}")
 
-            model.train()
             losses += [ loss_sum / len(train_loader) ]
             accs += [ no_correct / len(test_loader) * 100 ]
 
@@ -198,6 +198,7 @@ def train(expr: str, operation_suffix: str, verbose: bool, device: str) -> nn.Se
                                     f" loss {losses[-1]:10.5f} acc {accs[-1]:5.2f}")
                 print()
 
+        model.eval()
         for idx, (x_val, y_val) in enumerate(test_loader):
             res = model.forward(x_val)
 
@@ -344,4 +345,15 @@ def train_mapping(epochs: int, batch_size: int, dataset_size: int, device: str) 
             t_total += targets_t.size(0)
             t_correct += predicted_t.eq(targets_t).sum().item()
 
+
+def test_pruning(model: nn.Sequential, expr: str, device: str) -> None:
+    """evaluate the pruned model on the test data"""
+    model.eval()
+    _, test_loader = get_loaders(expr, device)
+    for idx, (x_val, y_val) in enumerate(test_loader):
+        res = model.forward(x_val)
+
+        print(f"x={x_val[0][0].squeeze():>5.0f} y={x_val[0][1].squeeze():>5.0f} "
+              f"res={y_val.item():5.2f} pred={res.item():5.2f}", end="\n", flush=False)
+        if idx>10: break
 
